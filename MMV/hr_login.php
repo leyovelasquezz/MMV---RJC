@@ -1,0 +1,8 @@
+<?php
+require_once __DIR__ . '/auth.php';
+if (!empty($_SESSION['hr_user_id']) && !empty($_SESSION['hr_role'])) { header('Location: index.php', true, 302); exit; }
+$page = 'hr';
+require __DIR__ . '/views/auth_view.php';
+exit;
+?>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MMV | HR Login</title><style>body{font-family:Arial,sans-serif;background:#f8fafc;color:#0f172a;display:grid;place-items:center;min-height:100vh;margin:0}.card{background:#fff;width:min(390px,90vw);padding:32px;border-radius:14px;box-shadow:0 14px 35px #0f172a18}h1{margin:0;color:#4f46e5}p{color:#64748b}label{display:block;margin:16px 0 6px;font-size:14px}input,button{box-sizing:border-box;width:100%;padding:12px;border-radius:8px;border:1px solid #cbd5e1}button{margin-top:20px;border:0;background:#4f46e5;color:#fff;font-weight:bold;cursor:pointer}#message{min-height:20px;margin-top:14px;color:#b91c1c;font-size:14px}</style></head><body><main class="card"><h1>MMV</h1><p>RJC Corporate Center — HR access</p><form id="login"><label>Username<input name="username" required autocomplete="username"></label><label>Password<input name="password" type="password" required autocomplete="current-password"></label><button>Sign in</button></form><div id="message"></div></main><script>document.querySelector('#login').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target);const r=await fetch('api/hr_login.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(f))});const d=await r.json();if(d.ok)location.replace('index.php');else document.querySelector('#message').textContent=d.message||'Sign-in failed.'})</script></body></html>

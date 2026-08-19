@@ -1,0 +1,13 @@
+<?php
+require_once __DIR__ . '/../db_connect.php'; require_once __DIR__ . '/../auth.php'; require_hr_admin(); header('Content-Type: application/json');
+$method=$_SERVER['REQUEST_METHOD']; $data=json_decode(file_get_contents('php://input'),true) ?: $_POST;
+if ($method==='GET') { $rows=$pdo->query('SELECT hr_user_id,full_name,username,email,role,status,created_at FROM hr_users ORDER BY full_name')->fetchAll(PDO::FETCH_ASSOC); echo json_encode(['ok'=>true,'users'=>$rows]); exit; }
+if ($method==='POST') {
+  $id=(int)($data['hr_user_id']??0); $name=trim($data['full_name']??''); $username=trim($data['username']??''); $email=trim($data['email']??''); $role=$data['role']??'HR Personnel'; $status=$data['status']??'Active'; $password=(string)($data['password']??'');
+  if ($name==='' || !preg_match('/^[A-Za-z0-9_.-]{3,50}$/',$username) || !filter_var($email,FILTER_VALIDATE_EMAIL) || !in_array($role,['HR Admin','HR Personnel'],true) || !in_array($status,['Active','Inactive'],true) || (!$id && strlen($password)<8)) { http_response_code(422); echo json_encode(['ok'=>false,'message'=>'Provide valid account details and a password of at least 8 characters for new accounts.']); exit; }
+  try { if($id){ if($id===(int)$_SESSION['hr_user_id'] && ($status!=='Active' || $role!==$_SESSION['hr_role'])){http_response_code(422);echo json_encode(['ok'=>false,'message'=>'You cannot deactivate or change your own access role.']);exit;} $sql='UPDATE hr_users SET full_name=?,username=?,email=?,role=?,status=?'.($password!==''?',password_hash=?':'').' WHERE hr_user_id=?'; $values=[$name,$username,$email,$role,$status]; if($password!=='')$values[]=password_hash($password,PASSWORD_DEFAULT); $values[]=$id; $pdo->prepare($sql)->execute($values); if($id===(int)$_SESSION['hr_user_id'])$_SESSION['hr_name']=$name; } else { $pdo->prepare('INSERT INTO hr_users (full_name,username,email,password_hash,role,status) VALUES (?,?,?,?,?,?)')->execute([$name,$username,$email,password_hash($password,PASSWORD_DEFAULT),$role,$status]); } echo json_encode(['ok'=>true]); }
+  catch(PDOException $e){http_response_code(409);echo json_encode(['ok'=>false,'message'=>'Username or email is already in use.']);} exit;
+}
+if ($method==='DELETE') { $id=(int)($data['hr_user_id']??0); if(!$id || $id===(int)$_SESSION['hr_user_id']){http_response_code(422);echo json_encode(['ok'=>false,'message'=>'You cannot delete your own account.']);exit;} $pdo->prepare('DELETE FROM hr_users WHERE hr_user_id=?')->execute([$id]); echo json_encode(['ok'=>true]); exit; }
+http_response_code(405); echo json_encode(['ok'=>false,'message'=>'Method not allowed.']);
+?>
